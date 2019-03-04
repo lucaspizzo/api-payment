@@ -5,7 +5,6 @@ import (
 	"github.com/lucaspizzo/api-payment/domains"
 	"github.com/lucaspizzo/api-payment/forms"
 	"github.com/lucaspizzo/api-payment/infrastructure/repositories"
-
 	"github.com/pkg/errors"
 )
 
@@ -19,7 +18,6 @@ type AccountContract interface {
 type AccountService struct {
 	AccountRepository repositories.AccountQuerier `inject:""`
 }
-
 
 func (as *AccountService) Register(name string) (*domains.Account, error) {
 
@@ -57,9 +55,12 @@ func (as *AccountService) UpdateLimits(form *forms.LimitForm) (*domains.Account,
 		return account, err
 	}
 
-	account.AvailableCreditLimit = form.AvailableCreditLimit.Amount
-	account.AvailableWithdrawalLimit = form.AvailableWithdrawalLimit.Amount
+	account.AvailableCreditLimit = account.AvailableCreditLimit + form.AvailableCreditLimit.Amount
+	account.AvailableWithdrawalLimit = account.AvailableWithdrawalLimit + form.AvailableWithdrawalLimit.Amount
 
+	if !account.Validate() {
+		return nil, account.GetError()
+	}
 
 	err = as.AccountRepository.Update(account)
 	if err != nil {
@@ -67,4 +68,3 @@ func (as *AccountService) UpdateLimits(form *forms.LimitForm) (*domains.Account,
 	}
 	return account, err
 }
-
