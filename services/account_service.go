@@ -9,9 +9,9 @@ import (
 )
 
 type AccountContract interface {
-	Register(name string) (*domains.Account, error)
 	Get(id uint64) (*domains.Account, error)
 	List() (*[]*domains.Account, error)
+	Update(availableCreditLimit float64, availableWithdrawalLimit float64, account *domains.Account) (*domains.Account, error)
 	UpdateLimits(form *forms.LimitForm) (*domains.Account, error)
 }
 
@@ -19,22 +19,11 @@ type AccountService struct {
 	AccountRepository repositories.AccountQuerier `inject:""`
 }
 
-func (as *AccountService) Register(name string) (*domains.Account, error) {
-
-	account := &domains.Account{}
-
-	if err := as.AccountRepository.Insert(account); err != nil {
-		errors.Wrap(err, fmt.Sprintf("Unable to save new account"))
-		return nil, err
-	}
-	return account, nil
-}
-
 func (as *AccountService) Get(id uint64) (*domains.Account, error) {
 	account := &domains.Account{}
 	err := as.AccountRepository.GetById(id, account)
 	if err != nil {
-		errors.Wrap(err, fmt.Sprintf("Unable to get paymentType with id: %s", id))
+		errors.Wrap(err, fmt.Sprintf("Unable to get paymentType with id: %d", id))
 	}
 	return account, err
 }
@@ -48,6 +37,23 @@ func (as *AccountService) List() (*[]*domains.Account, error) {
 	return accounts, err
 }
 
+func (as *AccountService) Update(availableCreditLimit float64, availableWithdrawalLimit float64, account *domains.Account) (*domains.Account, error) {
+
+	account.AvailableCreditLimit = account.AvailableCreditLimit + availableCreditLimit
+	account.AvailableWithdrawalLimit = account.AvailableWithdrawalLimit + availableWithdrawalLimit
+
+	if !account.Validate() {
+		return nil, account.GetError()
+	}
+
+	err := as.AccountRepository.Update(account)
+	if err != nil {
+		errors.Wrap(err, fmt.Sprintf("Unable to list accounts"))
+	}
+
+	return account, err
+}
+
 func (as *AccountService) UpdateLimits(form *forms.LimitForm) (*domains.Account, error) {
 	account, err := as.Get(form.AccountID)
 	if err != nil {
@@ -55,16 +61,5 @@ func (as *AccountService) UpdateLimits(form *forms.LimitForm) (*domains.Account,
 		return account, err
 	}
 
-	account.AvailableCreditLimit = account.AvailableCreditLimit + form.AvailableCreditLimit.Amount
-	account.AvailableWithdrawalLimit = account.AvailableWithdrawalLimit + form.AvailableWithdrawalLimit.Amount
-
-	if !account.Validate() {
-		return nil, account.GetError()
-	}
-
-	err = as.AccountRepository.Update(account)
-	if err != nil {
-		errors.Wrap(err, fmt.Sprintf("Unable to list accounts"))
-	}
-	return account, err
+	return as.Update(form.AvailableCreditLimit.Amount, form.AvailableWithdrawalLimit.Amount, account)
 }

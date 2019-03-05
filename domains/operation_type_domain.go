@@ -1,7 +1,7 @@
 package domains
 
 type OperationType struct {
-	OperationTypeID uint64
-	Description     OperationTypeDescription `sql:"primary_key;"`
+	OperationTypeID uint64 `sql:"primary_key;"`
+	Description     OperationTypeDescription
 	ChargeOrder     uint64
 }

@@ -9,8 +9,8 @@ import (
 )
 
 type Repository struct {
-	dbPostgres *gorm.DB
-	once       sync.Once
+	db   *gorm.DB
+	once sync.Once
 }
 
 func (r *Repository) Start() {
@@ -24,18 +24,18 @@ func (r *Repository) Start() {
 }
 
 func (r *Repository) Stop() {
-	defer r.dbPostgres.Close()
+	defer r.db.Close()
 }
 
 func (r *Repository) GetInstance() *gorm.DB {
 	r.once.Do(func() {
 		var err error
-		r.dbPostgres, err = GetGormDb()
+		r.db, err = GetGormDb()
 		if err != nil {
 			panic(err.Error())
 		}
-		r.dbPostgres.SingularTable(true)
-		r.dbPostgres.LogMode(true)
+		r.db.SingularTable(true)
+		r.db.LogMode(true)
 	})
-	return r.dbPostgres
+	return r.db
 }

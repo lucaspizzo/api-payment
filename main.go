@@ -16,28 +16,49 @@ func main() {
 	BuildContainer()
 }
 
-
 func BuildContainer() {
 	var g inject.Graph
 	db := &db.Repository{}
-	// httpClient := &http.Client{}
 	db.Start()
 	gorm := db.GetInstance()
 
+	// CORE
 	server := &api.Server{}
 
+	// REPOSITORIES
 	accountRepository := &repositories.AccountRepository{DB: gorm}
+	operationTypeRepository := &repositories.OperationTypeRepository{DB: gorm}
+	transactionRepository := &repositories.TransactionRepository{DB: gorm}
 
+	// SERVICES
 	accountService := &services.AccountService{}
+	operationTypeService := &services.OperationTypeService{}
+	transactionService := &services.TransactionService{}
 
+	// CONTROLLERS
 	accountController := &controllers.AccountController{}
-
+	transactionController := &controllers.TransactionController{}
+	paymentController := &controllers.PaymentController{}
 
 	err := g.Provide(
+
+		// CORE
 		&inject.Object{Value: server},
+
+		// REPOSITORIES
 		&inject.Object{Value: accountRepository},
+		&inject.Object{Value: operationTypeRepository},
+		&inject.Object{Value: transactionRepository},
+
+		// SERVICES
 		&inject.Object{Value: accountService},
+		&inject.Object{Value: operationTypeService},
+		&inject.Object{Value: transactionService},
+
+		// CONTROLLERS
 		&inject.Object{Value: accountController},
+		&inject.Object{Value: transactionController},
+		&inject.Object{Value: paymentController},
 	)
 
 	if err != nil {

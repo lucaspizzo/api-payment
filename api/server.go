@@ -8,7 +8,9 @@ import (
 )
 
 type Server struct {
-	AccountController controllers.Accounter `inject:""`
+	AccountController     controllers.Accounter     `inject:""`
+	TransactionController controllers.Transactioner `inject:""`
+	PaymentController     controllers.Paymenter     `inject:""`
 }
 
 func (s *Server) Run() {
@@ -20,12 +22,21 @@ func (s *Server) Run() {
 func (s *Server) SetupRoutes() *gin.Engine {
 	router := gin.Default()
 
-	router.GET("/health/check", func (ctx *gin.Context) {
+	router.GET("/health/check", func(ctx *gin.Context) {
 		ctx.JSON(200, "OK")
 	})
 
-	router.GET("/v1/accounts/limits", s.AccountController.ListAccount)
-	router.PATCH("/v1/accounts/:id", s.AccountController.UpdateLimits)
+	v1 := router.Group("/v1")
+	{
+		accounts := v1.Group("/accounts")
+		{
+			accounts.GET("/limits", s.AccountController.ListAccount)
+			accounts.PATCH("/:id", s.AccountController.UpdateLimits)
+		}
+
+		v1.POST("/transactions", s.TransactionController.AddTransaction)
+		v1.POST("/payments", s.PaymentController.AddPayment)
+	}
 
 	return router
 }
