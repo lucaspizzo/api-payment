@@ -13,7 +13,7 @@ type Paymenter interface {
 
 type PaymentController struct {
 	BaseController
-	PaymentService services.AccountContract `inject:""`
+	PaymentService services.PaymentContract `inject:""`
 }
 
 func (p *PaymentController) AddPayment(ctx *gin.Context) {
@@ -30,5 +30,12 @@ func (p *PaymentController) AddPayment(ctx *gin.Context) {
 		return
 	}
 
-	p.respond(ctx, nil)
+	err := p.PaymentService.RegisterPayments(&form)
+
+	if err != nil {
+		p.respondError(ctx, err)
+		return
+	}
+
+	p.respondSuccessNoContent(ctx)
 }

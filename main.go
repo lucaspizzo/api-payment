@@ -18,6 +18,8 @@ func main() {
 
 func BuildContainer() {
 	var g inject.Graph
+
+	// DB
 	db := &db.Repository{}
 	db.Start()
 	gorm := db.GetInstance()
@@ -34,6 +36,7 @@ func BuildContainer() {
 	accountService := &services.AccountService{}
 	operationTypeService := &services.OperationTypeService{}
 	transactionService := &services.TransactionService{}
+	paymentService := &services.PaymentService{}
 
 	// CONTROLLERS
 	accountController := &controllers.AccountController{}
@@ -41,6 +44,9 @@ func BuildContainer() {
 	paymentController := &controllers.PaymentController{}
 
 	err := g.Provide(
+
+		// DB
+		&inject.Object{Value: db},
 
 		// CORE
 		&inject.Object{Value: server},
@@ -54,6 +60,7 @@ func BuildContainer() {
 		&inject.Object{Value: accountService},
 		&inject.Object{Value: operationTypeService},
 		&inject.Object{Value: transactionService},
+		&inject.Object{Value: paymentService},
 
 		// CONTROLLERS
 		&inject.Object{Value: accountController},

@@ -22,7 +22,7 @@ func (t *TransactionRepository) FindAll(list *[]*domains.Transaction) error {
 }
 
 func (t *TransactionRepository) FindAllByAccountId(list *[]*domains.Transaction, accountID uint64) error {
-	return t.DB.Where("account_id = ? ", accountID).Find(&list).Error
+	return t.DB.Where("account_id = ? ", accountID).Preload("OperationType").Find(&list).Error
 }
 
 func (t *TransactionRepository) GetById(id uint64, model *domains.Transaction) error {

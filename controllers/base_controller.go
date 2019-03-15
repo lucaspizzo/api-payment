@@ -40,7 +40,7 @@ func (b *BaseController) respond(ctx *gin.Context, result interface{}) {
 	ctx.JSON(http.StatusOK, result)
 }
 
-func (b *BaseController) respondSucessNoContent(ctx *gin.Context) {
+func (b *BaseController) respondSuccessNoContent(ctx *gin.Context) {
 	ctx.Status(http.StatusNoContent)
 }
 

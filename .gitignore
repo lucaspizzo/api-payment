@@ -17,5 +17,5 @@ tmp
 /main
 /tmp/*
 main
-./api-payment
+api-payment
 postgres/

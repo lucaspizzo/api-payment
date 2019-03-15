@@ -13,10 +13,10 @@ type TransactionContract interface {
 	List() (*[]*domains.Transaction, error)
 	ListByAccountId(accountID uint64) (*[]*domains.Transaction, error)
 	Update(transaction *domains.Transaction) (*domains.Transaction, error)
-	createPayment(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) *domains.Transaction
-	processPayment(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) *domains.Transaction
-	processPurchase(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) *domains.Transaction
-	process(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) (*domains.Transaction, error)
+	createPayment(account *domains.Account, operationType *domains.OperationType) *domains.Transaction
+	processPayment(account *domains.Account, operationType *domains.OperationType, amount float64) *domains.Transaction
+	processPurchase(account *domains.Account, operationType *domains.OperationType, amount float64) *domains.Transaction
+	process(accountID uint64, operationTypeId uint64, amount float64) (*domains.Transaction, error)
 	RegisterTransaction(form *forms.TransactionForm) (*domains.Transaction, error)
 }
 
@@ -61,7 +61,7 @@ func (ts *TransactionService) Update(transaction *domains.Transaction) (*domains
 	return transaction, err
 }
 
-func (ts *TransactionService) createPayment(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) *domains.Transaction {
+func (ts *TransactionService) createPayment(account *domains.Account, operationType *domains.OperationType) *domains.Transaction {
 	transaction := domains.Transaction{}
 
 	transaction.Account = *account
@@ -76,19 +76,19 @@ func (ts *TransactionService) createPayment(account *domains.Account, operationT
 	return &transaction
 }
 
-func (ts *TransactionService) processPurchase(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) *domains.Transaction {
-	transaction := ts.createPayment(account, operationType, form)
+func (ts *TransactionService) processPurchase(account *domains.Account, operationType *domains.OperationType, amount float64) *domains.Transaction {
+	transaction := ts.createPayment(account, operationType)
 
-	transaction.Amount = form.Amount * -1
-	transaction.Balance = form.Amount * -1
+	transaction.Amount = amount * -1
+	transaction.Balance = amount * -1
 
 	return transaction
 }
 
-func (ts *TransactionService) processPayment(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) *domains.Transaction {
-	transaction := ts.createPayment(account, operationType, form)
+func (ts *TransactionService) processPayment(account *domains.Account, operationType *domains.OperationType, amount float64) *domains.Transaction {
+	transaction := ts.createPayment(account, operationType)
 
-	transaction.Amount = form.Amount
+	transaction.Amount = amount
 
 	var availableCredit = transaction.Amount
 	transactions, _ := ts.ListByAccountId(account.AccountID)
@@ -118,38 +118,31 @@ func (ts *TransactionService) processPayment(account *domains.Account, operation
 
 }
 
-func (ts *TransactionService) process(account *domains.Account, operationType *domains.OperationType, form *forms.TransactionForm) (*domains.Transaction, error) {
-
-	if account.AvailableCreditLimit <= form.Amount && account.AvailableWithdrawalLimit <= form.Amount {
-		return nil, errors.New("Limit not available")
-	}
-
-	if operationType.Description == domains.OperationTypePayment {
-		return ts.processPayment(account, operationType, form), nil
-	} else {
-		return ts.processPurchase(account, operationType, form), nil
-	}
-
-}
-
-func (ts *TransactionService) RegisterTransaction(form *forms.TransactionForm) (*domains.Transaction, error) {
+func (ts *TransactionService) process(accountID uint64, operationTypeId uint64, amount float64) (*domains.Transaction, error) {
 
 	// SEARCH ACCOUNT
-	account, accountErr := ts.AccountService.Get(form.AccountID)
+	account, accountErr := ts.AccountService.Get(accountID)
 	if accountErr != nil {
 		return nil, errors.New("Account not found")
 	}
 
 	// SEARCH OPERATION TYPE
-	operationType, operationTypeErr := ts.OperationTypeService.Get(form.OperationTypeId)
+	operationType, operationTypeErr := ts.OperationTypeService.Get(operationTypeId)
 	if operationTypeErr != nil {
 		return nil, errors.New("Operation not found")
 	}
 
 	// PROCESS
-	transaction, transactionErr := ts.process(account, operationType, form)
-	if transactionErr != nil {
-		return nil, transactionErr
+	if account.AvailableCreditLimit <= amount && account.AvailableWithdrawalLimit <= amount {
+		return nil, errors.New("Limit not available")
+	}
+
+	transaction := &domains.Transaction{}
+
+	if operationType.Description == domains.OperationTypePayment {
+		transaction = ts.processPayment(account, operationType, amount)
+	} else {
+		transaction = ts.processPurchase(account, operationType, amount)
 	}
 
 	// INSERT PAYMENT INTO DATABASE
@@ -167,4 +160,9 @@ func (ts *TransactionService) RegisterTransaction(form *forms.TransactionForm) (
 	}
 
 	return transaction, nil
+
+}
+
+func (ts *TransactionService) RegisterTransaction(form *forms.TransactionForm) (*domains.Transaction, error) {
+	return ts.process(form.AccountID, form.OperationTypeId, form.Amount)
 }
