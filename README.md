@@ -1,6 +1,6 @@
 # api-payment
 
-### Para rodar a aplicação basta rodar :
+### Para startar a aplicação basta digitar :
 ```shell 
 docker-compose up
 ```
